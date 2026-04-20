@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic vs. Social Risk Task</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f4f7f6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+
+        #experiment-container { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+            width: 500px; 
+            height: 520px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; 
+            text-align: center;
+        }
+
+        .status-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            font-weight: bold; 
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        #scenario-container {
+            height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        #phase-indicator { color: #3498db; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
+        #scenario-text { margin: 0 0 10px 0; font-size: 1.1rem; line-height: 1.4; }
+        .peer-info { color: #8e44ad; font-style: italic; font-weight: 600; margin-top: 10px; }
+        .trial-counter { font-size: 0.8rem; color: #888; text-transform: uppercase; }
+
+        .btn-container { 
+            display: flex; 
+            justify-content: space-around; 
+            gap: 10px;
+            margin-top: auto; 
+        }
+
+        button { 
+            padding: 15px 20px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 8px; 
+            transition: background 0.2s, transform 0.1s;
+            width: 100%; 
+        }
+
+        .btn-safe { background-color: #2ecc71; color: white; }
+        .btn-risk { background-color: #e74c3c; color: white; }
+        .btn-action { background-color: #3498db; color: white; }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.95); }
+
+        #log { 
+            height: 70px; 
+            font-size: 0.8rem; 
+            color: #666; 
+            text-align: left; 
+            overflow-y: auto; 
+            border-top: 1px solid #eee; 
+            padding-top: 10px;
+            margin-top: 15px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="experiment-container">
+    <div id="intro">
+        <h2>Decision Making Study</h2>
+        <p>Complete 10 trials across 2 phases.</p>
+        <button class="btn-action" onclick="startExperiment()">Begin Task</button>
+    </div>
+
+    <div id="task" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="status-bar">
+            <span>Academic Standing: <span id="academic-score">50</span>%</span>
+            <span>Social Satisfaction: <span id="social-score">50</span>%</span>
+        </div>
+
+        <div id="scenario-container">
+            <div id="phase-indicator">Phase 1</div>
+            <span class="trial-counter" id="trial-display">Trial 1 of 5</span>
+            <h3 id="scenario-text">Loading...</h3>
+            <div id="peer-text" class="peer-info hidden"></div>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn-safe" onclick="recordChoice(0)">Stay & Study</button>
+            <button class="btn-risk" onclick="recordChoice(1)">Go Out</button>
+        </div>
+
+        <div id="log"></div>
+    </div>
+
+    <div id="end" class="hidden">
+        <h2>Task Complete</h2>
+        <div id="final-results-box" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p id="final-stats-academic" style="font-size: 1.2rem; margin: 10px 0;"></p>
+            <p id="final-stats-social" style="font-size: 1.2rem; margin: 10px 0;"></p>
+            <p style="font-size: 0.9rem; color: #27ae60;">Thank you for your participation. Data has been saved.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTrialIndex = 0;
+    const maxTrials = 10;
+    
+    let academicScore = 50;
+    let socialScore = 100; 
+    const maxSocialScore = 200; 
+
+    let p1Results = [];
+    let p2Results = [];
+    
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzevhwQ1axbuadCs7QQdeOlXlTVN11dx_V4_QFRqmra1u2Gz2wCkbt6pTIGCHFnh5Iy/exec';
+
+    const scenarios = [
+        { text: "A friend invites you to a house party the night before your final.", peer: null },
+        { text: "The group is heading to a bar for 'just one drink'.", peer: null },
+        { text: "A late-night concert was just announced for tonight.", peer: null },
+        { text: "Your friends are ordering pizza and watching a movie.", peer: null },
+        { text: "Everyone is taking a break to play video games in the lounge.", peer: null },
+        { text: "A roommate invites you on a spontaneous road trip.", peer: "85% of your friends chose to go." },
+        { text: "A study group suggests hitting a diner instead of reviewing.", peer: "Most students in your class are at the diner right now." },
+        { text: "There's a local festival happening tonight only.", peer: "Your entire social circle has checked in there on social media." },
+        { text: "Your best friend wants to vent about a breakup over coffee.", peer: "Your mutual friends are all there supporting them." },
+        { text: "A club you like is having an unplanned social mixer.", peer: "The majority of club members voted to attend." }
+    ];
+
+    function startExperiment() {
+        document.getElementById('intro').classList.add('hidden');
+        document.getElementById('task').classList.remove('hidden');
+        showTrial();
+    }
+
+    function showTrial() {
+        const current = scenarios[currentTrialIndex];
+        const isPhaseTwo = currentTrialIndex >= 5;
+        
+        document.getElementById('phase-indicator').innerText = isPhaseTwo ? "Phase 2" : "Phase 1";
+        document.getElementById('trial-display').innerText = `Trial ${(currentTrialIndex % 5) + 1} of 5`;
+        document.getElementById('scenario-text').innerText = current.text;
+
+        const peerDiv = document.getElementById('peer-text');
+        if (current.peer) {
+            peerDiv.innerText = current.peer;
+            peerDiv.classList.remove('hidden');
+        } else {
+            peerDiv.classList.add('hidden');
+        }
+    }
+
+    function recordChoice(choice) {
+        if (currentTrialIndex < 5) {
+            p1Results.push(choice);
+        } else {
+            p2Results.push(choice);
+        }
+
+        if (choice === 0) {
+            academicScore = Math.min(100, academicScore + 2);
+            logAction(`Trial ${currentTrialIndex + 1}: Chose Study`);
+        } else {
+            academicScore = Math.max(0, academicScore - 15);
+            socialScore = Math.min(maxSocialScore, socialScore + 20); 
+            logAction(`Trial ${currentTrialIndex + 1}: Chose Social`);
+        }
+
+        updateUI();
+        currentTrialIndex++;
+
+        if (currentTrialIndex >= maxTrials) {
+            sendDataToSheet();
+            endExperiment();
+        } else {
+            showTrial();
+        }
+    }
+
+    function updateUI() {
+        const socialPercentage = (socialScore / maxSocialScore) * 100;
+        document.getElementById('academic-score').innerText = academicScore;
+        document.getElementById('social-score').innerText = Math.max(0, socialPercentage).toFixed(0);
+    }
+
+    function sendDataToSheet() {
+        const avg = arr => (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2);
+        
+        const payload = {
+            "Participant_ID": "ID-" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+            "P1_Trial_1": p1Results[0],
+            "P1_Trial_2": p1Results[1],
+            "P1_Trial_3": p1Results[2],
+            "P1_Trial_4": p1Results[3],
+            "P1_Trial_5": p1Results[4],
+            "P1_Average": avg(p1Results),
+            "P2_Trial_1": p2Results[0],
+            "P2_Trial_2": p2Results[1],
+            "P2_Trial_3": p2Results[2],
+            "P2_Trial_4": p2Results[3],
+            "P2_Trial_5": p2Results[4],
+            "P2_Average": avg(p2Results)
+        };
+
+        fetch(scriptURL, {
+            method: 'POST',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    }
+
+    function logAction(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.innerHTML = `> ${msg}<br>` + logDiv.innerHTML;
+    }
+
+    function endExperiment() {
+        const socialPercentage = (socialScore / maxSocialScore) * 100;
+        document.getElementById('task').classList.add('hidden');
+        document.getElementById('end').classList.remove('hidden');
+        
+        document.getElementById('final-stats-academic').innerHTML = 
+            `Academic Result: <strong>${academicScore}%</strong>`;
+        document.getElementById('final-stats-social').innerHTML = 
+            `Social Result: <strong>${Math.max(0, socialPercentage).toFixed(0)}%</strong>`;
+    }
+</script>
+
+</body>
+</html>
