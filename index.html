@@ -132,9 +132,9 @@
     let currentTrialIndex = 0;
     const maxTrials = 10;
     
+    // Equal baseline
     let academicScore = 50;
-    let socialScore = 100; 
-    const maxSocialScore = 200; 
+    let socialScore = 50; 
 
     let p1Results = [];
     let p2Results = [];
@@ -142,16 +142,17 @@
     const scriptURL = 'https://script.google.com/macros/s/AKfycbzevhwQ1axbuadCs7QQdeOlXlTVN11dx_V4_QFRqmra1u2Gz2wCkbt6pTIGCHFnh5Iy/exec';
 
     const scenarios = [
-        { text: "A friend invites you to a house party the night before your final.", peer: null },
-        { text: "The group is heading to a bar for 'just one drink'.", peer: null },
-        { text: "A late-night concert was just announced for tonight.", peer: null },
-        { text: "Your friends are ordering pizza and watching a movie.", peer: null },
-        { text: "Everyone is taking a break to play video games in the lounge.", peer: null },
-        { text: "A roommate invites you on a spontaneous road trip.", peer: "85% of your friends chose to go." },
-        { text: "A study group suggests hitting a diner instead of reviewing.", peer: "Most students in your class are at the diner right now." },
-        { text: "There's a local festival happening tonight only.", peer: "Your entire social circle has checked in there on social media." },
-        { text: "Your best friend wants to vent about a breakup over coffee.", peer: "Your mutual friends are all there supporting them." },
-        { text: "A club you like is having an unplanned social mixer.", peer: "The majority of club members voted to attend." }
+        { text: "A group is heading to a house party late at night, but you have a project due tomorrow morning.", peer: null },
+        { text: "Your friends are going out to a bar for the night, but you haven't started studying for your exam.", peer: null },
+        { text: "There is an invite to stay out late at a concert, but you have an early morning lab session.", peer: null },
+        { text: "Everyone is going out for a midnight movie premiere, but you have a heavy reading assignment to finish.", peer: null },
+        { text: "Your peers are heading to a local festival tonight, but you have a quiz you're unprepared for.", peer: null },
+        
+        { text: "A group is heading to a house party late at night, but you have a project due tomorrow morning.", peer: "85% of your classmates chose to go out." },
+        { text: "Your friends are going out to a bar for the night, but you haven't started studying for your exam.", peer: "Most students in your major are at the bar right now." },
+        { text: "There is an invite to stay out late at a concert, but you have an early morning lab session.", peer: "The majority of your social circle has already checked in at the concert." },
+        { text: "Everyone is going out for a midnight movie premiere, but you have a heavy reading assignment to finish.", peer: "Almost all your friends voted to attend the premiere." },
+        { text: "Your peers are heading to a local festival tonight, but you have a quiz you're unprepared for.", peer: "90% of your friends are currently at the festival." }
     ];
 
     function startExperiment() {
@@ -184,12 +185,15 @@
             p2Results.push(choice);
         }
 
-        if (choice === 0) {
-            academicScore = Math.min(100, academicScore + 2);
+        const weight = 10; // Equal weight change for both scores
+
+        if (choice === 0) { // Stay & Study
+            academicScore = Math.min(100, academicScore + weight);
+            socialScore = Math.max(0, socialScore - weight);
             logAction(`Trial ${currentTrialIndex + 1}: Chose Study`);
-        } else {
-            academicScore = Math.max(0, academicScore - 15);
-            socialScore = Math.min(maxSocialScore, socialScore + 20); 
+        } else { // Go Out
+            academicScore = Math.max(0, academicScore - weight);
+            socialScore = Math.min(100, socialScore + weight); 
             logAction(`Trial ${currentTrialIndex + 1}: Chose Social`);
         }
 
@@ -205,9 +209,8 @@
     }
 
     function updateUI() {
-        const socialPercentage = (socialScore / maxSocialScore) * 100;
         document.getElementById('academic-score').innerText = academicScore;
-        document.getElementById('social-score').innerText = Math.max(0, socialPercentage).toFixed(0);
+        document.getElementById('social-score').innerText = socialScore;
     }
 
     function sendDataToSheet() {
@@ -244,14 +247,13 @@
     }
 
     function endExperiment() {
-        const socialPercentage = (socialScore / maxSocialScore) * 100;
         document.getElementById('task').classList.add('hidden');
         document.getElementById('end').classList.remove('hidden');
         
         document.getElementById('final-stats-academic').innerHTML = 
             `Academic Result: <strong>${academicScore}%</strong>`;
         document.getElementById('final-stats-social').innerHTML = 
-            `Social Result: <strong>${Math.max(0, socialPercentage).toFixed(0)}%</strong>`;
+            `Social Result: <strong>${socialScore}%</strong>`;
     }
 </script>
 
